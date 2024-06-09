@@ -15,6 +15,8 @@ import { LuUser } from "react-icons/lu";
 import { menuItem } from "@/lib/menuItem";
 import { extractLinks } from "@/lib/extractlink";
 import MessagesShower from "./MessagesShower";
+import { MdSwapHorizontalCircle } from "react-icons/md";
+import { MdSwapVerticalCircle } from "react-icons/md";
 
 const Voicebot = () => {
 
@@ -29,6 +31,17 @@ const Voicebot = () => {
   const [modal, setModal] = useState(false);
   const [isBotThinking, setIsBotThinking] = useState(false);
   const [textLinks, setTextLinks] = useState([]);
+  const [swap, setSwap] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  
+  // Function to open the modal
+  const openModal = () => setIsModalOpen(true);
+
+  // Function to close the modal
+  const closeModal = () => setIsModalOpen(false);
+
+  // Modal component
+
 
   const sendTextToFlowise = async (text) => {
     setIsBotThinking(true);
@@ -79,41 +92,43 @@ const Voicebot = () => {
     }
   }
 
-  const runSpeechRecognition = () => {
-    var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    var recognition = new SpeechRecognition();
-    recognition.lang = language;
+  // Define audio variable outside to make it globally accessible within this module
+var audio = null;
 
+const runSpeechRecognition = (state) => {
+  var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  var recognition = new SpeechRecognition();
+  recognition.lang = language;
+
+  if (state === 'start') {
     recognition.onstart = () => {
-      setOnListening(true)
+      setOnListening(true);
     };
 
     recognition.onspeechend = () => {
       recognition.stop();
       setOnListening(false);
-    }
+    };
 
     recognition.onresult = async (event) => {
       var transcript = event.results[0][0].transcript;
-
       const usertext = {
         text: transcript,
-        sender: 'user'
-      }
+        sender: 'user',
+      };
       setMessages([...messages, usertext]);
 
       let res = await axios.post('https://aigeene-backend-bca9d58acf33.herokuapp.com/api/text-to-audio-file', {
         question: transcript,
-        language
-      })
-
-
+        language,
+      });
+      
       const botText = {
         text: res.data.response.text,
-        sender: 'bot'
-      }
+        sender: 'bot',
+      };
 
-      setMessages(prevMessages => [...prevMessages, botText]);
+      setMessages((prevMessages) => [...prevMessages, botText]);
 
       setSpeaking(true);
       // Convert the Buffer to a Blob
@@ -123,8 +138,15 @@ const Voicebot = () => {
       // Create an object URL from the Blob
       var url = URL.createObjectURL(blob);
 
+      // Stop any previously playing audio
+      if (audio) {
+        audio.pause();
+        audio.currentTime = 0;
+        URL.revokeObjectURL(audio.src); // Clean up the object URL to release resources
+      }
+
       // Create a new Audio object and play the audio
-      var audio = new Audio(url);
+      audio = new Audio(url);
       audio.play();
       audio.onended = () => {
         setSpeaking(false);
@@ -132,7 +154,21 @@ const Voicebot = () => {
     };
 
     recognition.start();
+  } else if (state === 'stop') {
+    // Stop the audio if it's playing
+    if (audio) {
+      audio.pause();
+      audio.currentTime = 0;
+      URL.revokeObjectURL(audio.src); // Clean up the object URL to release resources
+      audio = null; // Clear the audio object to ensure it's fully stopped
+    }
+    // Stop speech recognition if it's running
+    recognition.abort();
+    setOnListening(false);
+    setSpeaking(false);
   }
+};
+
 
   const clearAllmessage = () => {
     setMessages([]);
@@ -146,7 +182,13 @@ const Voicebot = () => {
 
   useEffect(scrollToBottom, [messages]);
 
-  console.log('textLinks', textLinks);
+  const Modal = () => (
+    <div className=" flex space-x-3 absolute top-3/4 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white p-5 rounded-lg shadow">
+    <div className="cursor-pointer" onClick={() => runSpeechRecognition('start')}>Start Speaking</div>
+    
+    <button onClick={closeModal} className="ml-2">X</button>
+  </div>
+  );
 
   return (
     <section className="absolute bottom-4 right-4  rounded-2xl  ">
@@ -154,7 +196,8 @@ const Voicebot = () => {
         <div className="bg-white border-b-2 flex-grow-0 p-3 flex justify-between items-center rounded-t-2xl  shadow-md ">
           <Image src={'https://i.ibb.co/LP36Jnb/Aigeenee-logo.png'} width={150} height={100} alt="bot_logo" />
 
-          <div className="flex space-x-2 ">
+          <div className=" space-x-2 flex items-center ">
+         { swap ? <MdSwapHorizontalCircle onClick={() => setVoiceOutput(!voiceOutPut)}  size={25} className="cursor-pointer" /> : <MdSwapVerticalCircle  onClick={() => setVoiceOutput(!voiceOutPut)} size={25} className="cursor-pointer" /> }
             <select defaultValue="en-US" className="border rounded-lg p-2 " onChange={(event) => setLanguage(event.target.value)} >
               <option value="en-US">English</option>
               <option value="ar">Arabic</option>
@@ -164,7 +207,7 @@ const Voicebot = () => {
           </div>
         </div>
 
-        {!voiceOutPut && <div className=" bg-[#F8F8F8] flex-grow overflow-y-auto p-4 relative">
+        {!voiceOutPut &&  <div className=" bg-[#F8F8F8] flex-grow overflow-y-auto p-4 relative">
 
           {modal &&
             <div className=" z-20  inset-0 flex items-center justify-center absolute ">
@@ -180,10 +223,9 @@ const Voicebot = () => {
             </div>
           }
           {messages.length == 0 &&
-            <div className="h-full w-full flex flex-col justify-center items-center space-y-4  " >
+            <div className="h-full w-full flex flex-col justify-center items-center space-y-4">
 
               <Image src={'/absher.gif'} width={300} height={300} />
-
 
               <div className=" w-full h-full rounded-md grid grid-cols-3 gap-4 justify-center ">
                 {menuItem.map((item) =>
@@ -196,7 +238,7 @@ const Voicebot = () => {
             </div>
           }
 
-          {messages.map((item, index) =>  <MessagesShower key={index} item={item} setMessages={setMessages}  /> )}
+          {messages.map((item, index) =>  <MessagesShower runSpeechRecognition={runSpeechRecognition} key={index} item={item} setMessages={setMessages}  /> )}
           <div ref={messagesEndRef} />
         </div>}
 
@@ -207,7 +249,10 @@ const Voicebot = () => {
                 <input value={text} onChange={(e) => setText(e.target.value)} type="text" className="flex-grow p-2 outline-none" placeholder="write here" />
                 <div className="flex-grow-0 flex items-center space-x-3">
 
-                  <FaMicrophone color="#47AC47" onClick={() => runSpeechRecognition()} size={20} className="cursor-pointer" />
+                    <div>
+                      <FaMicrophone color="#47AC47" onClick={openModal} size={20} className="cursor-pointer" />
+                      {isModalOpen && <Modal />}
+                    </div>
 
                   <button type="submit">
                     <IoSend color="#47AC47" size={20} className="cursor-pointer" />
@@ -216,6 +261,14 @@ const Voicebot = () => {
               </div>
             </form>
           </div>
+        </div>}
+
+        {voiceOutPut && <div className=" rounded-b-3xl w-full h-full bg-black flex flex-col justify-evenly text-white items-center " >
+               {speaking && <Image src={'/speaking.gif'} width={200} height={200} /> }
+               
+              <FaMicrophone color="#47AC47" onClick={() => runSpeechRecognition('start')} size={35} className="cursor-pointer" />
+              {onListening && <Image src={'/ai_.gif'} width={200} height={200} /> }
+            
         </div>}
 
       </div>}
@@ -230,4 +283,7 @@ const Voicebot = () => {
 }
 
 export default Voicebot;
+
+
+
 

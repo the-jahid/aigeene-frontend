@@ -1,6 +1,6 @@
 import { extractLinks } from "@/lib/extractlink";
 
-const MessagesShower = ({ item, setMessages }) => {
+const MessagesShower = ({ item, setMessages, runSpeechRecognition }) => {
   const { sender, text } = item;
   let links = extractLinks(text);
     console.log('links', links);
@@ -12,6 +12,7 @@ const MessagesShower = ({ item, setMessages }) => {
         {sender === 'bot' && (
           <button onClick={() => setMessages([])} className="text-green-900 px-4 py-2 border-green-700 rounded-2xl text-xs hover:border-green-400 hover:bg-green-600 border-2 hover:text-white">List Of Services</button>
         )}
+        
         {links.length > 0 && sender === 'bot' && (
           links.map((link, index) => (
             <a key={index} href={link} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">
