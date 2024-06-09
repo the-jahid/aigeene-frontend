@@ -191,7 +191,7 @@ const runSpeechRecognition = (state) => {
   );
 
   return (
-    <section className="absolute bottom-4 right-4  rounded-2xl  ">
+    <section className="absolute bottom-4 right-4  rounded-2xl relative  ">
       {showBot && <div className=" flex flex-col  w-[400px] h-[85vh]  rounded-3xl border">
         <div className="bg-white border-b-2 flex-grow-0 p-3 flex justify-between items-center rounded-t-2xl  shadow-md ">
           <Image src={'https://i.ibb.co/LP36Jnb/Aigeenee-logo.png'} width={150} height={100} alt="bot_logo" />
@@ -207,7 +207,7 @@ const runSpeechRecognition = (state) => {
           </div>
         </div>
 
-        {!voiceOutPut &&  <div className=" bg-[#F8F8F8] flex-grow overflow-y-auto p-4 relative">
+        {!voiceOutPut &&  <div className=" bg-[#F8F8F8] flex-grow overflow-y-auto p-4 ">
 
           {modal &&
             <div className=" z-20  inset-0 flex items-center justify-center absolute ">
