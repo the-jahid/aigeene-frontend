@@ -191,8 +191,8 @@ const runSpeechRecognition = (state) => {
   );
 
   return (
-    <section className="absolute bottom-4 right-4  rounded-2xl relative  ">
-      {showBot && <div className=" flex flex-col  w-[400px] h-[85vh]  rounded-3xl border">
+    <section className="absolute bottom-4 right-4  rounded-2xl  ">
+      {showBot && <div className=" flex flex-col  w-[400px] h-[85vh]  rounded-3xl border relative">
         <div className="bg-white border-b-2 flex-grow-0 p-3 flex justify-between items-center rounded-t-2xl  shadow-md ">
           <Image src={'https://i.ibb.co/LP36Jnb/Aigeenee-logo.png'} width={150} height={100} alt="bot_logo" />
 
