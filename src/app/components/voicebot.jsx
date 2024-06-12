@@ -17,6 +17,8 @@ import { extractLinks } from "@/lib/extractlink";
 import MessagesShower from "./MessagesShower";
 import { MdSwapHorizontalCircle } from "react-icons/md";
 import { MdSwapVerticalCircle } from "react-icons/md";
+import { removeLinksFromText } from "@/lib/removeLinkFromText";
+
 
 const Voicebot = () => {
 
@@ -33,7 +35,15 @@ const Voicebot = () => {
   const [textLinks, setTextLinks] = useState([]);
   const [swap, setSwap] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const audioRef = useRef(null);
   
+
+  const stopAudio = () => {
+    audioRef.current.pause();
+    setSpeaking(false);
+  };
+  
+
   // Function to open the modal
   const openModal = () => setIsModalOpen(true);
 
@@ -41,8 +51,6 @@ const Voicebot = () => {
   const closeModal = () => setIsModalOpen(false);
 
   // Modal component
-
-
   const sendTextToFlowise = async (text) => {
     setIsBotThinking(true);
     const url = 'https://aigeene-backend-bca9d58acf33.herokuapp.com/api/text-to-text';
@@ -66,8 +74,7 @@ const Voicebot = () => {
         body: JSON.stringify(data)
       });
 
-    
-
+  
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
@@ -75,13 +82,12 @@ const Voicebot = () => {
       const result = await response.json();
       
       const links = extractLinks(result.text);
-      setTextLinks(...links);
+      setTextLinks([...links]);
       
-
       setIsBotThinking(false);
 
       const botText = {
-        text: result.text,
+        text: removeLinksFromText(result.text),
         sender: 'bot'
       }
 
@@ -92,82 +98,71 @@ const Voicebot = () => {
     }
   }
 
-  // Define audio variable outside to make it globally accessible within this module
-var audio = null;
+   // Moved outside to be accessible across function calls
 
-const runSpeechRecognition = (state) => {
-  var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-  var recognition = new SpeechRecognition();
-  recognition.lang = language;
+  
+  const runSpeechRecognition = (state) => {
 
-  if (state === 'start') {
-    recognition.onstart = () => {
-      setOnListening(true);
-    };
+    var audio = null;
+    var recognition = null;
 
-    recognition.onspeechend = () => {
-      recognition.stop();
-      setOnListening(false);
-    };
-
-    recognition.onresult = async (event) => {
-      var transcript = event.results[0][0].transcript;
-      const usertext = {
-        text: transcript,
-        sender: 'user',
-      };
-      setMessages([...messages, usertext]);
-
-      let res = await axios.post('https://aigeene-backend-bca9d58acf33.herokuapp.com/api/text-to-audio-file', {
-        question: transcript,
-        language,
-      });
-      
-      const botText = {
-        text: res.data.response.text,
-        sender: 'bot',
-      };
-
-      setMessages((prevMessages) => [...prevMessages, botText]);
-
-      setSpeaking(true);
-      // Convert the Buffer to a Blob
-      var arrayBuffer = new Uint8Array(res.data.audioResponse.data).buffer;
-      var blob = new Blob([arrayBuffer], { type: 'audio/mp3' });
-
-      // Create an object URL from the Blob
-      var url = URL.createObjectURL(blob);
-
-      // Stop any previously playing audio
-      if (audio) {
-        audio.pause();
-        audio.currentTime = 0;
-        URL.revokeObjectURL(audio.src); // Clean up the object URL to release resources
-      }
-
-      // Create a new Audio object and play the audio
-      audio = new Audio(url);
-      audio.play();
-      audio.onended = () => {
-        setSpeaking(false);
-      };
-    };
-
-    recognition.start();
-  } else if (state === 'stop') {
-    // Stop the audio if it's playing
-    if (audio) {
-      audio.pause();
-      audio.currentTime = 0;
-      URL.revokeObjectURL(audio.src); // Clean up the object URL to release resources
-      audio = null; // Clear the audio object to ensure it's fully stopped
+    if (!recognition) {
+      var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      recognition = new SpeechRecognition();
     }
-    // Stop speech recognition if it's running
-    recognition.abort();
-    setOnListening(false);
-    setSpeaking(false);
-  }
-};
+  
+    recognition.lang = language;
+  
+   
+      recognition.onstart = () => {
+        setOnListening(true);
+      };
+  
+      recognition.onspeechend = () => {
+        recognition.stop();
+        setOnListening(false);
+      };
+  
+      recognition.onresult = async (event) => {
+        var transcript = event.results[0][0].transcript;
+        const usertext = {
+          text: transcript,
+          sender: 'user',
+        };
+        setMessages([...messages, usertext]);
+  
+        let res = await axios.post('https://aigeene-backend-bca9d58acf33.herokuapp.com/api/text-to-audio-file', {
+          question: transcript,
+          language,
+        });
+
+        const links = extractLinks(res.data.response.text);
+        setTextLinks([...links]);
+        
+        const botText = {
+          text: removeLinksFromText(res.data.response.text),
+          sender: 'bot',
+        };
+  
+        setMessages((prevMessages) => [...prevMessages, botText]);
+  
+        setSpeaking(true);
+        var arrayBuffer = new Uint8Array(res.data.audioResponse.data).buffer;
+        var blob = new Blob([arrayBuffer], { type: 'audio/mp3' });
+        var url = URL.createObjectURL(blob);
+  
+        audioRef.current = new Audio(url);
+        audioRef.current.play();
+        
+        audioRef.current.onended = () => {
+          setSpeaking(false);
+        };
+
+      };
+  
+      recognition.start();
+  
+  };
 
 
   const clearAllmessage = () => {
@@ -182,14 +177,21 @@ const runSpeechRecognition = (state) => {
 
   useEffect(scrollToBottom, [messages]);
 
+ 
+
   const Modal = () => (
-    <div className=" flex space-x-3 absolute top-3/4 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white p-5 rounded-lg shadow">
-    <div className="cursor-pointer" onClick={() => runSpeechRecognition('start')}>Start Speaking</div>
-    
-    <button onClick={closeModal} className="ml-2">X</button>
+    <div className=" flex flex-col space-x-3 absolute top-3/4 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-black p-5 rounded-lg shadow">
+    <div className="flex space-x-2 text white items-center" >
+    <div className="cursor-pointer text-[#47AC47] hover:text-[#47AC30]" onClick={() => runSpeechRecognition('start')}>
+  Start Speaking
+</div>
+        <button onClick={closeModal} className="ml-2 text-[#47AC47]">X</button>
+        { speaking && <MdVoiceOverOff onClick={() => stopAudio()} color="#47AC47" className="cursor-pointer" />}
+    </div> 
+      {speaking && <Image src={'/speaking2.gif'} width={100} height={80} />}
   </div>
   );
-
+ 
   return (
     <section className="absolute bottom-4 right-4  rounded-2xl  ">
       {showBot && <div className=" flex flex-col  w-[400px] h-[85vh]  rounded-3xl border relative">
@@ -238,7 +240,7 @@ const runSpeechRecognition = (state) => {
             </div>
           }
 
-          {messages.map((item, index) =>  <MessagesShower runSpeechRecognition={runSpeechRecognition} key={index} item={item} setMessages={setMessages}  /> )}
+          {messages.map((item, index) =>  <MessagesShower links={textLinks} key={index} item={item} setMessages={setMessages}  /> )}
           <div ref={messagesEndRef} />
         </div>}
 
@@ -252,6 +254,7 @@ const runSpeechRecognition = (state) => {
                     <div>
                       <FaMicrophone color="#47AC47" onClick={openModal} size={20} className="cursor-pointer" />
                       {isModalOpen && <Modal />}
+                      
                     </div>
 
                   <button type="submit">
@@ -265,17 +268,22 @@ const runSpeechRecognition = (state) => {
 
         {voiceOutPut && <div className=" rounded-b-3xl w-full h-full bg-black flex flex-col justify-evenly text-white items-center " >
                {speaking && <Image src={'/speaking.gif'} width={200} height={200} /> }
-               
+               { speaking && <div onClick={() => stopAudio()} className="bg-[#47AC47] hover:bg-green-700 flex space-x-2 rounded-lg items-center p-2 cursor-pointer " >
+                 <p  >Stop Voice</p>
+                 <MdVoiceOverOff  color="white" className="cursor-pointer" />
+               </div> }
+                
               <FaMicrophone color="#47AC47" onClick={() => runSpeechRecognition('start')} size={35} className="cursor-pointer" />
               {onListening && <Image src={'/ai_.gif'} width={200} height={200} /> }
-            
+              <div>
+  
+            </div>
         </div>}
 
       </div>}
 
       <div onClick={() => setShowBot(!showBot)} className="w-16 h-16 bg-green-300 flex justify-center items-center rounded-full cursor-pointer " >
         <TbMessageCircle2Filled size={24} />
-
       </div>
 
     </section>

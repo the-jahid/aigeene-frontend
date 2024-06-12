@@ -1,8 +1,8 @@
 import { extractLinks } from "@/lib/extractlink";
 
-const MessagesShower = ({ item, setMessages, runSpeechRecognition }) => {
+const MessagesShower = ({ item, setMessages, links }) => {
   const { sender, text } = item;
-  let links = extractLinks(text);
+ 
     console.log('links', links);
 
   return (
