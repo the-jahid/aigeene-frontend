@@ -1,12 +1,12 @@
 import { extractLinks } from "@/lib/extractlink";
 
-const MessagesShower = ({ item, setMessages, links }) => {
+const MessagesShower = ({ item, setMessages, links, isOdd }) => {
   const { sender, text } = item;
- 
-    console.log('links', links);
 
+  
+  
   return (
-    <div className={`flex my-2 ${sender === 'user' ? 'justify-end' : 'justify-start'}`}>
+    <div className={`flex my-2 ${sender === 'user'  ? 'justify-end' : 'justify-start'}`}>
       <div className={`flex flex-col justify-start items-start space-y-2 shadow-md p-3 hover:shadow-lg ${sender === 'user' ? 'bg-gradient-to-br from-green-600 to-indigo-400 text-white rounded-t-3xl rounded-bl-3xl' : 'bg-white transition duration-300 ease-in-out transform hover:-translate-y-1 text-black rounded-t-3xl rounded-br-3xl'}`}>
         <code className="break-all" >{text}</code>
         {sender === 'bot' && (
@@ -21,6 +21,8 @@ const MessagesShower = ({ item, setMessages, links }) => {
           ))
         )}
       </div>
+
+      
     </div>
   );
 };

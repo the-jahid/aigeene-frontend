@@ -43,7 +43,7 @@ const Voicebot = () => {
     setSpeaking(false);
   };
   
-
+  const isOdd = messages.length % 2 !== 0;
   // Function to open the modal
   const openModal = () => setIsModalOpen(true);
 
@@ -182,7 +182,7 @@ const Voicebot = () => {
   const Modal = () => (
     <div className=" flex flex-col space-x-3 absolute top-3/4 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-black p-5 rounded-lg shadow">
     <div className="flex space-x-2 text white items-center" >
-    <div className="cursor-pointer text-[#47AC47] hover:text-[#47AC30]" onClick={() => runSpeechRecognition('start')}>
+    <div className="cursor-pointer text-[#47AC47] hover:font-semibold" onClick={() => runSpeechRecognition('start')}>
   Start Speaking
 </div>
         <button onClick={closeModal} className="ml-2 text-[#47AC47]">X</button>
@@ -240,7 +240,12 @@ const Voicebot = () => {
             </div>
           }
 
-          {messages.map((item, index) =>  <MessagesShower links={textLinks} key={index} item={item} setMessages={setMessages}  /> )}
+          {messages.map((item, index) =>  <MessagesShower isOdd={isOdd}  links={textLinks} key={index} item={item} setMessages={setMessages}  />  )}
+          {isOdd && <div className="flex justify-center items-center space-x-2">
+  <div className="w-3 h-3 bg-green-500 rounded-full transform scale-50 animate-pulse"></div>
+  <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+  <div className="w-3 h-3 bg-green-500 rounded-full transform scale-75 animate-pulse"></div>
+</div>}
           <div ref={messagesEndRef} />
         </div>}
 
